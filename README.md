@@ -4,6 +4,50 @@ Python implementations of three estimation problems from the Financial Statistic
 
 The full brief is in [`Assignment_1_Brief__3.pdf`](Assignment_1_Brief__3.pdf). All code is written in Python.
 
+## Setup
+
+Requires Python 3.12 or newer. The pinned file was built with Python 3.14, so use 3.14 if an install fails on an older interpreter.
+
+```bash
+git clone https://github.com/DevanshArora2002/Finstats.git
+cd Finstats
+python3 -m venv .venv
+```
+
+Activate the environment:
+
+```bash
+# macOS and Linux
+source .venv/bin/activate
+
+# Windows (Command Prompt)
+.venv\Scripts\activate.bat
+
+# Windows (PowerShell)
+.venv\Scripts\Activate.ps1
+```
+
+Install the pinned dependencies from [`requirements.txt`](requirements.txt):
+
+```bash
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+That file is a full freeze, so every machine gets the same versions of pandas, NumPy, SciPy, statsmodels, xlrd, and Jupyter. The `.venv` directory stays local and is listed in `.gitignore`.
+
+Register the environment as a notebook kernel, then select **Finstats** for the notebooks in Cursor or Jupyter:
+
+```bash
+python -m ipykernel install --user --name finstats --display-name "Finstats"
+```
+
+After someone changes dependencies, pull and reinstall:
+
+```bash
+pip install -r requirements.txt
+```
+
 ## Questions
 
 | | Topic | Method | Data |
@@ -97,8 +141,8 @@ Both models are estimated on the US and UK one-month rates $r_t^{\mathrm{US}}$ a
 
 ## Data
 
-Place the coursework files alongside the scripts (names as given in the brief):
+The coursework workbooks are already in `data/`. `xlrd`, installed with the requirements above, is what lets pandas read these `.xls` files.
 
-- `data coursework Q1` — stock return, market return, risk-free rate
-- `data coursework Q2` — market return and predictors $X_t$
-- `data coursework Q3` — US and UK one-month interest rates
+- `data/data_coursework1_Q1__1_.xls` — stock return, market return, risk-free rate
+- `data/data_coursework1_Q2__2_.xls` — market return and predictors $X_t$
+- `data/data_coursework_Q3__1_.xls` — US and UK one-month interest rates
