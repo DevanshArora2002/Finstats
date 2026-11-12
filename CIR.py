@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+from IPython.display import display
 from scipy.optimize import minimize
 from statsmodels.tools.numdiff import approx_hess
 

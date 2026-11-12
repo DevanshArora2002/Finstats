@@ -7,6 +7,7 @@
 
 
 import numpy as np
+from IPython.display import display
 import pandas as pd
 
 from scipy.optimize import minimize
@@ -14,7 +15,7 @@ from scipy.stats import norm
 from statsmodels.tools.numdiff import approx_hess
 
 # Import Excel data
-data = pd.read_excel("data_coursework_Q3__1_.xls")
+data = pd.read_excel("data/data_coursework_Q3__1_.xls")
 
 display(data.head())
 
