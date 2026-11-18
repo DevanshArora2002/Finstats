@@ -9,9 +9,9 @@ import numpy as np
 import pandas as pd
 from IPython.display import display
 
-from ols_functions import vcov_white
-from q2_functions import alpha_scan, hit_ratio, lpm_fit, oos_hit, pt_test, search_subsets
-from table_helpers import clear_macros, fmt, fmtp, set_macro, write_macros
+from src.ols_functions import vcov_white
+from src.q2_functions import alpha_scan, hit_ratio, lpm_fit, oos_hit, pt_test, search_subsets
+from src.table_helpers import clear_macros, fmt, fmtp, set_macro, write_macros
 
 ITALIAN_MONTH = {
     "gen": 1,

@@ -11,8 +11,8 @@ import statsmodels.api as sm
 from IPython.display import display
 from scipy import stats
 
-from ols_functions import f_test, ols, t_test, vcov_white
-from table_helpers import clear_macros, fmt, fmtp, set_macro, write_macros
+from src.ols_functions import f_test, ols, t_test, vcov_white
+from src.table_helpers import clear_macros, fmt, fmtp, set_macro, write_macros
 
 
 def simple_ret(p):

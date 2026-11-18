@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from ols_functions import ols
+from src.ols_functions import ols
 
 
 # Hit ratio Z(alpha): share of months t = 2..n whose sign is called right.

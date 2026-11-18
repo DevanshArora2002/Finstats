@@ -1,5 +1,5 @@
-from CIR import main as cir_main
-from Vasicek import main as vasicek_main
+from src.CIR import main as cir_main
+from src.Vasicek import main as vasicek_main
 import numpy as np
 from IPython.display import display
 import pandas as pd
