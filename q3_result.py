@@ -1,3 +1,5 @@
+import os
+
 from src.CIR import main as cir_main
 from src.Vasicek import main as vasicek_main
 import numpy as np
@@ -5,6 +7,7 @@ from IPython.display import display
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
+from src.table_helpers import clear_macros, fmt, fmtp, set_macro, write_macros
 
 from scipy.optimize import minimize
 from scipy.stats import chi2
@@ -75,6 +78,16 @@ def gaussian_loglik(error, variance):
     return float(np.sum(-0.5 * (np.log(2.0 * np.pi * variance) + error**2 / variance)))
 
 
+def write_lines(path, lines):
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write("\n".join(lines) + "\n")
+
+
+def decide(p):
+    return "Reject" if p < 0.05 else "Do not reject"
+
+
 def fit_model(theta, y, x, model):
     mu = float(theta["mu"])
     phi = float(theta["phi"])
@@ -98,6 +111,7 @@ def fit_model(theta, y, x, model):
 
 
 def main():
+    clear_macros()
 
     results_cir = cir_main()
     results_vasicek = vasicek_main()
@@ -110,6 +124,14 @@ def main():
     theta_vasicek = {
         "US": results_vasicek["theta_vasicek_analytical_us"].astype(np.float64),
         "UK": results_vasicek["theta_vasicek_analytical_uk"].astype(np.float64),
+    }
+    V_cir = {
+        "US": results_cir["V_closed_us"],
+        "UK": results_cir["V_closed_uk"],
+    }
+    V_vasicek = {
+        "US": results_vasicek["V_closed_us"],
+        "UK": results_vasicek["V_closed_uk"],
     }
 
     rates = pd.read_excel("data/data_coursework_Q3__1_.xls")
@@ -220,6 +242,9 @@ def main():
             .set_index(["model", "bin"])
         )
     
+    os.makedirs("results", exist_ok=True)
+    os.makedirs("figures", exist_ok=True)
+
     plt.rcParams.update(
         {
             "figure.dpi": 120,
@@ -311,6 +336,7 @@ def main():
                     "country": country,
                     "restriction": f"gamma={int(gamma0)}",
                     "gamma_hat": gamma_hat,
+                    "gamma_se": float(np.sqrt(gamma_variance)),
                     "LR": lr,
                     "LR_p": float(chi2.sf(lr, 1)),
                     "Wald": wald,
@@ -332,6 +358,204 @@ def main():
             .drop(columns=["country", "loglik_free", "loglik_restricted"])
             .set_index("restriction")
         )
-    
+
+    params = ("mu", "phi", "sigma2")
+    param_tex = {"mu": r"$\mu$", "phi": r"$\phi$", "sigma2": r"$\sigma^2$"}
+    thetas = {"CIR": theta_cir, "Vasicek": theta_vasicek}
+    covariances = {"CIR": V_cir, "Vasicek": V_vasicek}
+
+    def se(model, country, name):
+        variance = float(covariances[model][country].loc[name, name])
+        return float(np.sqrt(variance))
+
+    estimate_lines = [
+        r"\begin{tabular}{lrrrrrr}",
+        r"\toprule",
+        r" & \multicolumn{3}{c}{CIR} & \multicolumn{3}{c}{Vasicek} \\",
+        r"\cmidrule(lr){2-4}\cmidrule(lr){5-7}",
+        r" & $\mu$ & $\phi$ & $\sigma^2$ & $\mu$ & $\phi$ & $\sigma^2$ \\",
+        r"\midrule",
+    ]
+    for country in ("US", "UK"):
+        estimate_lines.append(rf"\multicolumn{{7}}{{l}}{{\textit{{{country}}}}} \\")
+        estimates = []
+        errors = []
+        for model in ("CIR", "Vasicek"):
+            for name in params:
+                estimates.append(fmt(thetas[model][country][name]))
+                errors.append(fmt(se(model, country, name)))
+        estimate_lines.append("Estimate & " + " & ".join(estimates) + r" \\")
+        estimate_lines.append(r"Std.\ error & " + " & ".join(errors) + r" \\")
+        if country == "US":
+            estimate_lines.append(r"\midrule")
+    estimate_lines.extend(
+        [
+            r"\midrule",
+            (
+                r"\multicolumn{7}{l}{\footnotesize Analytical estimates. "
+                r"Standard errors are the square roots of the diagonal of the "
+                r"closed-form asymptotic covariance.} \\"
+            ),
+            r"\bottomrule",
+            r"\end{tabular}",
+        ]
+    )
+    write_lines("results/q3_estimates.tex", estimate_lines)
+
+    covariance_lines = [
+        r"\begin{tabular}{lrrr}",
+        r"\toprule",
+        r" & $\mu$ & $\phi$ & $\sigma^2$ \\",
+        r"\midrule",
+    ]
+    first_block = True
+    for country in ("US", "UK"):
+        for model in ("CIR", "Vasicek"):
+            if not first_block:
+                covariance_lines.append(r"\midrule")
+            first_block = False
+            matrix = covariances[model][country]
+            covariance_lines.append(
+                rf"\multicolumn{{4}}{{l}}{{\textit{{{country}, {model}}}}} \\"
+            )
+            for name in params:
+                cells = " & ".join(fmt(float(matrix.loc[name, other]), 6) for other in params)
+                covariance_lines.append(f"{param_tex[name]} & {cells} \\\\")
+    covariance_lines.extend([r"\bottomrule", r"\end{tabular}"])
+    write_lines("results/q3_covariance.tex", covariance_lines)
+
+    fit_lines = [
+        r"\begin{tabular}{llrrr}",
+        r"\toprule",
+        r"Country & Model & $n$ & RMSE & Log-likelihood \\",
+        r"\midrule",
+    ]
+    for i, country in enumerate(("US", "UK")):
+        if i:
+            fit_lines.append(r"\midrule")
+        first = True
+        block = fit_table.loc[fit_table["country"] == country]
+        for _, row in block.iterrows():
+            country_cell = country if first else ""
+            first = False
+            if row["model"] == "CIR minus Vasicek":
+                fit_lines.append(
+                    f"{country_cell} & CIR $-$ Vasicek & & & {fmt(row['loglik'], 3)} \\\\"
+                )
+                continue
+            fit_lines.append(
+                f"{country_cell} & {row['model']} & {int(row['n'])} & "
+                f"{fmt(row['RMSE'], 4)} & {fmt(row['loglik'], 3)} \\\\"
+            )
+    fit_lines.extend([r"\bottomrule", r"\end{tabular}"])
+    write_lines("results/q3_fit.tex", fit_lines)
+
+    tercile = {"low": "Low", "medium": "Medium", "high": "High"}
+    calibration_lines = [
+        r"\begin{tabular}{llrrrr}",
+        r"\toprule",
+        r"Country & Model & Tercile of $r_{t-1}$ & $n$ & Mean squared error & Mean fitted variance \\",
+        r"\midrule",
+    ]
+    for i, country in enumerate(("US", "UK")):
+        if i:
+            calibration_lines.append(r"\midrule")
+        first = True
+        block = calibration.loc[calibration["country"] == country]
+        for model in ("CIR", "Vasicek"):
+            for bin_name in ("low", "medium", "high"):
+                row = block.loc[
+                    (block["model"] == model) & (block["bin"] == bin_name)
+                ].iloc[0]
+                country_cell = country if first else ""
+                first = False
+                calibration_lines.append(
+                    f"{country_cell} & {model} & {tercile[bin_name]} & {int(row['n'])} & "
+                    f"{fmt(row['mean_squared_error'], 4)} & {fmt(row['mean_fitted_variance'], 4)} \\\\"
+                )
+    calibration_lines.extend([r"\bottomrule", r"\end{tabular}"])
+    write_lines("results/q3_calibration.tex", calibration_lines)
+
+    crit = float(chi2.ppf(0.95, 1))
+    null_tex = {
+        "gamma=0": r"$\gamma=0$ (Vasicek)",
+        "gamma=1": r"$\gamma=1$ (CIR)",
+    }
+    test_lines = [
+        r"\begin{tabular}{lllrrrl}",
+        r"\toprule",
+        r"Country & Null hypothesis & Test & Statistic & 5\% crit.\ value & $p$-value & Decision \\",
+        r"\midrule",
+    ]
+    for i, country in enumerate(("US", "UK")):
+        if i:
+            test_lines.append(r"\midrule")
+        block = test_table.loc[test_table["country"] == country]
+        gamma_hat = float(block["gamma_hat"].iloc[0])
+        gamma_se = float(block["gamma_se"].iloc[0])
+        test_lines.append(
+            r"\multicolumn{7}{l}{\footnotesize "
+            + f"{country}: $\\hat\\gamma={fmt(gamma_hat)}$, s.e.\\ {fmt(gamma_se)}}} \\\\"
+        )
+        country_pending = True
+        for _, row in block.iterrows():
+            null_pending = True
+            for label, stat_key, p_key in (
+                ("LR", "LR", "LR_p"),
+                ("Wald", "Wald", "Wald_p"),
+                ("LM", "LM", "LM_p"),
+            ):
+                country_cell = country if country_pending else ""
+                null_cell = null_tex[row["restriction"]] if null_pending else ""
+                country_pending = False
+                null_pending = False
+                p_value = float(row[p_key])
+                test_lines.append(
+                    f"{country_cell} & {null_cell} & {label} & {fmt(row[stat_key], 3)} & "
+                    f"{fmt(crit, 3)} & {fmtp(p_value)} & {decide(p_value)} \\\\"
+                )
+    test_lines.extend([r"\bottomrule", r"\end{tabular}"])
+    write_lines("results/q3_tests.tex", test_lines)
+
+    start = samples["US"]["date"].iloc[0]
+    end = samples["US"]["date"].iloc[-1]
+    set_macro("qthreeN", int(len(samples["US"])))
+    set_macro("qthreeStart", f"{start.day:02d} {start.strftime('%B')} {start.year}")
+    set_macro("qthreeEnd", f"{end.day:02d} {end.strftime('%B')} {end.year}")
+    set_macro("qthreeCrit", fmt(crit, 3))
+    country_key = {"US": "Us", "UK": "Uk"}
+    model_key = {"CIR": "Cir", "Vasicek": "Vas"}
+    param_key = {"mu": "Mu", "phi": "Phi", "sigma2": "Sig"}
+    for country in ("US", "UK"):
+        ck = country_key[country]
+        for model in ("CIR", "Vasicek"):
+            mk = model_key[model]
+            for name in params:
+                set_macro(
+                    f"qthree{ck}{mk}{param_key[name]}",
+                    fmt(thetas[model][country][name]),
+                )
+                set_macro(
+                    f"qthree{ck}{mk}{param_key[name]}Se",
+                    fmt(se(model, country, name)),
+                )
+            set_macro(f"qthree{ck}{mk}Rmse", fmt(fits[country][model]["rmse"], 4))
+            set_macro(f"qthree{ck}{mk}Ll", fmt(fits[country][model]["loglik"], 3))
+        diff = fits[country]["CIR"]["loglik"] - fits[country]["Vasicek"]["loglik"]
+        set_macro(f"qthree{ck}LlDiff", fmt(diff, 3))
+        block = test_table.loc[test_table["country"] == country]
+        set_macro(f"qthree{ck}Gamma", fmt(float(block["gamma_hat"].iloc[0])))
+        set_macro(f"qthree{ck}GammaSe", fmt(float(block["gamma_se"].iloc[0])))
+        for restriction, tag in (("gamma=0", "G0"), ("gamma=1", "G1")):
+            row = block.loc[block["restriction"] == restriction].iloc[0]
+            for label, stat_key, p_key in (
+                ("Lr", "LR", "LR_p"),
+                ("Wald", "Wald", "Wald_p"),
+                ("Lm", "LM", "LM_p"),
+            ):
+                set_macro(f"qthree{ck}{label}{tag}", fmt(row[stat_key], 3))
+                set_macro(f"qthree{ck}{label}{tag}p", fmtp(float(row[p_key])))
+    write_macros("results/q3_macros.tex")
+
 if __name__ == "__main__":
     main()
