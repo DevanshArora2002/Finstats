@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# First we do data handling.
-
 import numpy as np
 from IPython.display import display
 import pandas as pd
