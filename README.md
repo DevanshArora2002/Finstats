@@ -34,19 +34,33 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-That file is a full freeze, so every machine gets the same versions of pandas, NumPy, SciPy, statsmodels, xlrd, and Jupyter. The `.venv` directory stays local and is listed in `.gitignore`.
-
-Register the environment as a notebook kernel, then select **Finstats** for the notebooks in Cursor or Jupyter:
-
-```bash
-python -m ipykernel install --user --name finstats --display-name "Finstats"
-```
+That file is a full freeze, so every machine gets the same versions of pandas, NumPy, SciPy, statsmodels, matplotlib, and xlrd. The `.venv` directory stays local and is listed in `.gitignore`.
 
 After someone changes dependencies, pull and reinstall:
 
 ```bash
 pip install -r requirements.txt
 ```
+
+## Run
+
+Run each script from the repository root. The imports are `from src...`, so the root has to be the working directory.
+
+```bash
+python3 q1_capm.py
+python3 q2_probability.py
+python3 q3_result.py
+```
+
+Each script reads its workbook from `data/` and rewrites its outputs:
+
+| Script | Writes |
+| --- | --- |
+| `q1_capm.py` | `results/q1_*.tex`, `figures/q1_scatter.pdf` |
+| `q2_probability.py` | `results/q2_*.tex`, `figures/q2_search.pdf`, `figures/q2_zalpha.pdf`, `figures/q2_phat.pdf` |
+| `q3_result.py` | `results/q3_*.tex`, `figures/q3_one_step_mean_band.pdf`, `figures/q3_qq.pdf` |
+
+`q3_result.py` also prints the CIR and Vasicek estimates and the comparison tests. Those two models live in `src/CIR.py` and `src/Vasicek.py`. Shared OLS, hit-ratio, and table code is in `src/`. Copies of the tables and figures are already in `results/` and `figures/`.
 
 ## Questions
 
