@@ -253,7 +253,8 @@ def main():
     axes[0, 0].legend(loc="upper right", frameon=False)
     fig.suptitle("One-step mean and 95% prediction band")
     fig.tight_layout()
-    plt.show()
+    fig.savefig("figures/q3_one_step_mean_band.pdf")
+    plt.close(fig)
 
     fig, axes = plt.subplots(2, 2, figsize=(11, 7))
     for i, country in enumerate(countries):
@@ -266,7 +267,8 @@ def main():
             ax.get_lines()[0].set_color("0.2")
     fig.suptitle(r"Normal Q–Q plots of $e_t/\sqrt{v_t}$")
     fig.tight_layout()
-    plt.show()
+    fig.savefig("figures/q3_qq.pdf")
+    plt.close(fig)
 
 
     test_rows = []
